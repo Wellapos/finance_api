@@ -51,9 +51,28 @@ Para todos os endpoints de transações, inclua o token no header:
 Authorization: Bearer SEU_TOKEN_AQUI
 ```
 
-**Listar Transações**
+**Listar Transações (com paginação)**
 ```
-GET /api/transacoes
+GET /api/transacoes?pagina=1&limite=10
+```
+
+Query parameters opcionais:
+- `pagina` - Número da página (padrão: 1)
+- `limite` - Quantidade de itens por página (padrão: 10)
+
+Resposta:
+```json
+{
+  "transacoes": [...],
+  "paginacao": {
+    "paginaAtual": 1,
+    "limite": 10,
+    "total": 50,
+    "totalPaginas": 5,
+    "temProxima": true,
+    "temAnterior": false
+  }
+}
 ```
 
 **Criar Transação**

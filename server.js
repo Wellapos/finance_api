@@ -100,17 +100,46 @@ app.post('/api/login', (req, res) => {
 
 // ========== ENDPOINTS DE TRANSAÇÕES ==========
 
-// Listar transações
+// Listar transações com paginação
 app.get('/api/transacoes', autenticar, (req, res) => {
-  db.all(
-    'SELECT * FROM transacoes WHERE usuario_id = ? ORDER BY data DESC',
+  const pagina = parseInt(req.query.pagina) || 1;
+  const limite = parseInt(req.query.limite) || 10;
+  const offset = (pagina - 1) * limite;
+
+  // Buscar total de transações
+  db.get(
+    'SELECT COUNT(*) as total FROM transacoes WHERE usuario_id = ?',
     [req.usuarioId],
-    (erro, transacoes) => {
+    (erro, resultado) => {
       if (erro) {
         return res.status(500).json({ erro: 'Erro ao buscar transações' });
       }
 
-      res.json({ transacoes });
+      const total = resultado.total;
+      const totalPaginas = Math.ceil(total / limite);
+
+      // Buscar transações com paginação
+      db.all(
+        'SELECT * FROM transacoes WHERE usuario_id = ? ORDER BY data DESC LIMIT ? OFFSET ?',
+        [req.usuarioId, limite, offset],
+        (erro, transacoes) => {
+          if (erro) {
+            return res.status(500).json({ erro: 'Erro ao buscar transações' });
+          }
+
+          res.json({
+            transacoes,
+            paginacao: {
+              paginaAtual: pagina,
+              limite,
+              total,
+              totalPaginas,
+              temProxima: pagina < totalPaginas,
+              temAnterior: pagina > 1
+            }
+          });
+        }
+      );
     }
   );
 });
@@ -181,7 +210,7 @@ app.get('/', (req, res) => {
     endpoints: {
       'POST /api/criar-conta': 'Criar nova conta (login, senha)',
       'POST /api/login': 'Fazer login (login, senha)',
-      'GET /api/transacoes': 'Listar transações (requer autenticação)',
+      'GET /api/transacoes': 'Listar transações com paginação (requer autenticação) - Query params: pagina, limite',
       'POST /api/transacoes': 'Criar transação (requer autenticação)',
       'DELETE /api/transacoes/:id': 'Deletar transação (requer autenticação)'
     }
