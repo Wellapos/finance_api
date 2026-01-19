@@ -1,13 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 const db = require('./database');
+const { swaggerUi, specs } = require('./swagger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-secret-aqui-mude-em-producao';
 
+// Middlewares
+app.use(cors());
 app.use(express.json());
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Middleware de autenticação
 const autenticar = (req, res, next) => {
@@ -207,6 +214,7 @@ app.delete('/api/transacoes/:id', autenticar, (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     mensagem: 'API Finance - Gerenciador de Transações',
+    documentacao: '/api-docs',
     endpoints: {
       'POST /api/criar-conta': 'Criar nova conta (login, senha)',
       'POST /api/login': 'Fazer login (login, senha)',
