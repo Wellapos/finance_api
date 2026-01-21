@@ -94,7 +94,7 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ erro: 'Credenciais inválidas' });
       }
 
-      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '24h' });
+      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '5m' });
 
       res.json({
         mensagem: 'Login realizado com sucesso',
