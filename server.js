@@ -95,7 +95,7 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ erro: 'Credenciais inválidas' });
       }
 
-      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '24h' });
+      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '30m' });
       const refreshToken = jwt.sign({ id: usuario.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
       res.json({
@@ -118,7 +118,7 @@ app.post('/api/refresh-token', (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '5m' });
+    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '30m' });
 
     res.json({
       mensagem: 'Token atualizado com sucesso',
@@ -137,9 +137,13 @@ app.get('/api/transacoes', autenticar, (req, res) => {
   const limite = parseInt(req.query.limite) || 10;
   const offset = (pagina - 1) * limite;
 
-  // Buscar total de transações
+  // Buscar total de transações e resumo de valores
   db.get(
-    'SELECT COUNT(*) as total FROM transacoes WHERE usuario_id = ?',
+    `SELECT
+      COUNT(*) as total,
+      COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
+      COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas
+    FROM transacoes WHERE usuario_id = ?`,
     [req.usuarioId],
     (erro, resultado) => {
       if (erro) {
@@ -148,6 +152,8 @@ app.get('/api/transacoes', autenticar, (req, res) => {
 
       const total = resultado.total;
       const totalPaginas = Math.ceil(total / limite);
+      const entradas = resultado.entradas;
+      const saidas = resultado.saidas;
 
       // Buscar transações com paginação
       db.all(
@@ -167,6 +173,11 @@ app.get('/api/transacoes', autenticar, (req, res) => {
               totalPaginas,
               temProxima: pagina < totalPaginas,
               temAnterior: pagina > 1
+            },
+            resumo: {
+              total: entradas - saidas,
+              entradas,
+              saidas
             }
           });
         }

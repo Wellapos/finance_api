@@ -507,6 +507,27 @@ const options = {
                       },
                       paginacao: {
                         $ref: '#/components/schemas/Paginacao'
+                      },
+                      resumo: {
+                        type: 'object',
+                        description: 'Resumo financeiro de todas as transações do usuário',
+                        properties: {
+                          total: {
+                            type: 'integer',
+                            description: 'Saldo total (entradas - saídas) em centavos',
+                            example: 150000
+                          },
+                          entradas: {
+                            type: 'integer',
+                            description: 'Soma de todas as entradas em centavos',
+                            example: 250000
+                          },
+                          saidas: {
+                            type: 'integer',
+                            description: 'Soma de todas as saídas em centavos',
+                            example: 100000
+                          }
+                        }
                       }
                     }
                   }
