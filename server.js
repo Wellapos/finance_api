@@ -8,6 +8,7 @@ const { swaggerUi, specs } = require('./swagger');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-secret-aqui-mude-em-producao';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh-secret-aqui-mude-em-producao';
 
 // Middlewares
 app.use(cors());
@@ -94,15 +95,38 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ erro: 'Credenciais inválidas' });
       }
 
-      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '5m' });
+      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '24h' });
+      const refreshToken = jwt.sign({ id: usuario.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
       res.json({
         mensagem: 'Login realizado com sucesso',
         token,
+        refreshToken,
         usuario: { id: usuario.id, login: usuario.login }
       });
     }
   );
+});
+
+// Refresh Token
+app.post('/api/refresh-token', (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ erro: 'Refresh token é obrigatório' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '5m' });
+
+    res.json({
+      mensagem: 'Token atualizado com sucesso',
+      token: novoToken
+    });
+  } catch (erro) {
+    return res.status(401).json({ erro: 'Refresh token inválido ou expirado' });
+  }
 });
 
 // ========== ENDPOINTS DE TRANSAÇÕES ==========
@@ -218,6 +242,7 @@ app.get('/', (req, res) => {
     endpoints: {
       'POST /api/criar-conta': 'Criar nova conta (login, senha)',
       'POST /api/login': 'Fazer login (login, senha)',
+      'POST /api/refresh-token': 'Renovar token de acesso (refreshToken)',
       'GET /api/transacoes': 'Listar transações com paginação (requer autenticação) - Query params: pagina, limite',
       'POST /api/transacoes': 'Criar transação (requer autenticação)',
       'DELETE /api/transacoes/:id': 'Deletar transação (requer autenticação)'

@@ -125,6 +125,17 @@ const options = {
             }
           }
         },
+        RefreshToken: {
+          type: 'object',
+          required: ['refreshToken'],
+          properties: {
+            refreshToken: {
+              type: 'string',
+              description: 'Refresh token obtido no login',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            }
+          }
+        },
         CriarTransacao: {
           type: 'object',
           required: ['nome', 'valor', 'categoria', 'tipo'],
@@ -327,7 +338,12 @@ const options = {
                       },
                       token: {
                         type: 'string',
-                        description: 'Token JWT para autenticação',
+                        description: 'Token JWT para autenticação (expira em 5 minutos)',
+                        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                      },
+                      refreshToken: {
+                        type: 'string',
+                        description: 'Refresh token para renovar o token de acesso (expira em 7 dias)',
                         example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
                       },
                       usuario: {
@@ -377,6 +393,68 @@ const options = {
                   schema: {
                     $ref: '#/components/schemas/Erro'
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/refresh-token': {
+        post: {
+          tags: ['Autenticação'],
+          summary: 'Renovar token de acesso',
+          description: 'Utiliza o refresh token para obter um novo token de acesso',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/RefreshToken'
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Token renovado com sucesso',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      mensagem: {
+                        type: 'string',
+                        example: 'Token atualizado com sucesso'
+                      },
+                      token: {
+                        type: 'string',
+                        description: 'Novo token JWT de acesso',
+                        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Refresh token não fornecido',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/Erro'
+                  },
+                  example: { erro: 'Refresh token é obrigatório' }
+                }
+              }
+            },
+            401: {
+              description: 'Refresh token inválido ou expirado',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/Erro'
+                  },
+                  example: { erro: 'Refresh token inválido ou expirado' }
                 }
               }
             }
