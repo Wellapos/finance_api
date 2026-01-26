@@ -95,7 +95,7 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ erro: 'Credenciais inválidas' });
       }
 
-      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '30m' });
+      const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '10m' });
       const refreshToken = jwt.sign({ id: usuario.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
       res.json({
@@ -118,7 +118,7 @@ app.post('/api/refresh-token', (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '30m' });
+    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '10m' });
 
     res.json({
       mensagem: 'Token atualizado com sucesso',
