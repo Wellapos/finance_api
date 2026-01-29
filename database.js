@@ -29,6 +29,19 @@ db.serialize(() => {
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
     )
   `);
+
+  // Tabela de refresh tokens (uso único)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario_id INTEGER NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      expira_em DATETIME NOT NULL,
+      usado INTEGER DEFAULT 0,
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    )
+  `);
 });
 
 module.exports = db;

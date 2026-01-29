@@ -102,17 +102,31 @@ app.post('/api/login', (req, res) => {
       const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: '10m' });
       const refreshToken = jwt.sign({ id: usuario.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-      res.json({
-        mensagem: 'Login realizado com sucesso',
-        token,
-        refreshToken,
-        usuario: { id: usuario.id, login: usuario.login }
-      });
+      // Calcular data de expiração (7 dias)
+      const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Salvar refresh token no banco (uso único)
+      db.run(
+        'INSERT INTO refresh_tokens (usuario_id, token, expira_em) VALUES (?, ?, ?)',
+        [usuario.id, refreshToken, expiraEm],
+        function(erroToken) {
+          if (erroToken) {
+            return res.status(500).json({ erro: 'Erro ao gerar refresh token' });
+          }
+
+          res.json({
+            mensagem: 'Login realizado com sucesso',
+            token,
+            refreshToken,
+            usuario: { id: usuario.id, login: usuario.login }
+          });
+        }
+      );
     }
   );
 });
 
-// Refresh Token
+// Refresh Token (uso único)
 app.post('/api/refresh-token', (req, res) => {
   const { refreshToken } = req.body;
 
@@ -120,17 +134,61 @@ app.post('/api/refresh-token', (req, res) => {
     return res.status(400).json({ erro: 'Refresh token é obrigatório' });
   }
 
+  // Verificar se o token é válido (assinatura JWT)
+  let decoded;
   try {
-    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '10m' });
-
-    res.json({
-      mensagem: 'Token atualizado com sucesso',
-      token: novoToken
-    });
+    decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
   } catch (erro) {
     return res.status(401).json({ erro: 'Refresh token inválido ou expirado' });
   }
+
+  // Verificar se o token existe no banco e não foi usado
+  db.get(
+    'SELECT * FROM refresh_tokens WHERE token = ? AND usado = 0',
+    [refreshToken],
+    (erro, tokenDb) => {
+      if (erro) {
+        return res.status(500).json({ erro: 'Erro ao verificar refresh token' });
+      }
+
+      if (!tokenDb) {
+        return res.status(401).json({ erro: 'Refresh token inválido, expirado ou já utilizado' });
+      }
+
+      // Marcar token como usado
+      db.run(
+        'UPDATE refresh_tokens SET usado = 1 WHERE id = ?',
+        [tokenDb.id],
+        (erroUpdate) => {
+          if (erroUpdate) {
+            return res.status(500).json({ erro: 'Erro ao processar refresh token' });
+          }
+
+          // Gerar novos tokens
+          const novoToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '10m' });
+          const novoRefreshToken = jwt.sign({ id: decoded.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+          const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          // Salvar novo refresh token
+          db.run(
+            'INSERT INTO refresh_tokens (usuario_id, token, expira_em) VALUES (?, ?, ?)',
+            [decoded.id, novoRefreshToken, expiraEm],
+            function(erroInsert) {
+              if (erroInsert) {
+                return res.status(500).json({ erro: 'Erro ao gerar novo refresh token' });
+              }
+
+              res.json({
+                mensagem: 'Token atualizado com sucesso',
+                token: novoToken,
+                refreshToken: novoRefreshToken
+              });
+            }
+          );
+        }
+      );
+    }
+  );
 });
 
 // ========== ENDPOINTS DE TRANSAÇÕES ==========

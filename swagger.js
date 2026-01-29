@@ -402,8 +402,8 @@ const options = {
       '/api/refresh-token': {
         post: {
           tags: ['Autenticação'],
-          summary: 'Renovar token de acesso',
-          description: 'Utiliza o refresh token para obter um novo token de acesso',
+          summary: 'Renovar token de acesso (uso único)',
+          description: 'Utiliza o refresh token para obter um novo token de acesso e um novo refresh token. O refresh token enviado é invalidado após o uso (uso único).',
           requestBody: {
             required: true,
             content: {
@@ -428,7 +428,12 @@ const options = {
                       },
                       token: {
                         type: 'string',
-                        description: 'Novo token JWT de acesso',
+                        description: 'Novo token JWT de acesso (expira em 10 minutos)',
+                        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                      },
+                      refreshToken: {
+                        type: 'string',
+                        description: 'Novo refresh token (uso único, expira em 7 dias)',
                         example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
                       }
                     }
@@ -448,13 +453,13 @@ const options = {
               }
             },
             401: {
-              description: 'Refresh token inválido ou expirado',
+              description: 'Refresh token inválido, expirado ou já utilizado',
               content: {
                 'application/json': {
                   schema: {
                     $ref: '#/components/schemas/Erro'
                   },
-                  example: { erro: 'Refresh token inválido ou expirado' }
+                  example: { erro: 'Refresh token inválido, expirado ou já utilizado' }
                 }
               }
             }
